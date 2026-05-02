@@ -10,6 +10,7 @@ TARGET_EXTENSIONS = {'.html', '.css', '.js'}
 UPLOAD_BROKEN = "https://upload.cppreference.com/mwiki/images/"
 UPLOAD_CORRECT = "https://upload.cppreference.com/images/"
 UPLOAD_LOCAL_DIR = "upload.cppreference.com/images/"
+IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico")
 
 FONT_NAMES = (
     "DejaVuSans.ttf",
@@ -32,12 +33,23 @@ def local_prefix(root, file_path):
 
 
 def clean_url(url):
-    return url.rstrip('"\'),;')
+    url = url.rstrip('"\'),;')
+    parsed = urlparse(url)
+    path = strip_image_cache_suffix(parsed.path)
+    if path.lower().endswith(IMAGE_EXTENSIONS):
+        return parsed._replace(path=path, fragment='').geturl()
+    return url
+
+
+def strip_image_cache_suffix(path):
+    return re.sub(
+        r'(\.(?:png|jpe?g|gif|svg|webp|ico))(?:@|%40)[^/\\?#]*$',
+        r'\1', path, flags=re.IGNORECASE)
 
 
 def local_path_for_url(url):
     parsed = urlparse(url)
-    return parsed.netloc + parsed.path
+    return parsed.netloc + strip_image_cache_suffix(parsed.path)
 
 
 def rewrite_upload_urls(content, root, file_path, urls_to_download):
