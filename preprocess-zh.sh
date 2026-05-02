@@ -33,6 +33,7 @@ else
 fi
 
 git apply -3 ../preprocess_cssless.diff
+git apply -3 ../upstream-layout.diff
 
 VERSION="${VERSION:-$(date +%Y%m%d)}"
 sed -i "/^VERSION=/cVERSION=${VERSION}" Makefile
@@ -40,25 +41,27 @@ make source
 
 pushd reference
 python3 ../../fix_mirror.py
-wget --force-directories --retry-connrefused --waitretry=2 --read-timeout=13 --trust-server-names -i urls_to_download.txt
-rm -f urls_to_download.txt
+if [[ -s urls_to_download.txt ]]; then
+  wget --force-directories --retry-connrefused --waitretry=2 --read-timeout=13 --trust-server-names -i urls_to_download.txt
+  rm -f urls_to_download.txt
+fi
 popd
 
 # init files and vars
 startup_scripts_replace="startup_scripts.js"
-startup_scripts_path="$(find | grep -iP 'load\.php.*?modules=startup&only=scripts.*?' | head -1)"
+startup_scripts_path="$(find reference -type f | grep -iP 'load\.php.*?modules=startup&only=scripts.*?' | head -1 || true)"
 
 site_scripts_replace="site_scripts.js"
-site_scripts_path="$(find | grep -iP 'load\.php.*?modules=site&only=scripts.*?' | head -1)"
+site_scripts_path="$(find reference -type f | grep -iP 'load\.php.*?modules=site&only=scripts.*?' | head -1 || true)"
 
 site_modules_replace="site_modules.css"
-site_modules_path="$(find | grep -iP 'load\.php.*?modules=site&only=styles.*?' | head -1)"
+site_modules_path="$(find reference -type f | grep -iP 'load\.php.*?(modules=site[.&]|modules=site&).*only=styles.*?' | head -1 || true)"
 
 skin_scripts_replace="skin_scripts.js"
-skin_scripts_path="$(find | grep -iP 'load\.php.*?modules=skins.*&only=scripts.*?' | head -1)"
+skin_scripts_path="$(find reference -type f | grep -iP 'load\.php.*?modules=skins.*&only=scripts.*?' | head -1 || true)"
 
 ext_replace="ext.css"
-ext_path="$(find | grep -iP 'load\.php.*?modules=.*ext.*&only=styles.*?' | head -1)"
+ext_path="$(find reference -type f | grep -iP 'load\.php.*?modules=.*ext.*&only=styles.*?' | head -1 || true)"
 
 LIST="startup_scripts site_scripts site_modules skin_scripts ext"
 extra_fonts="DejaVuSans.ttf DejaVuSans-Bold.ttf DejaVuSansMono.ttf DejaVuSansMono-Bold.ttf DejaVuSansMonoCondensed60.ttf DejaVuSansMonoCondensed75.ttf"
@@ -89,6 +92,9 @@ copy_file(){
     local var=$1
     local path="$(eval echo "\${${var}_path}")"
     local replace="$(eval echo "\${${var}_replace}")"
+    if [[ -z "${path}" || ! -f "${path}" ]]; then
+        return 0
+    fi
     local dir="$(dirname "${path}")"
     cp -f -T "${path}" "${dir}/${replace}"
 }
@@ -96,6 +102,9 @@ copy_file(){
 remove_file(){
     local var=$1
     local path="$(eval echo "\${${var}_path}")"
+    if [[ -z "${path}" ]]; then
+        return 0
+    fi
     local name="$(basename "${path}")"
     find -iname "${name}" | xargs rm -f
 }
@@ -104,6 +113,9 @@ replace_in_html(){
     local var=$1
     local path="$(eval echo "\${${var}_path}")"
     local replace="$(eval echo "\${${var}_replace}")"
+    if [[ -z "${path}" ]]; then
+        return 0
+    fi
     local name="$(basename "${path}")"
     local encoded_name="$(url_encode "${name}")"
     find ./ -iname '*.html' -type f | xargs -P "${CPUS}" sed -i "s/${name}/${replace}/gi"
@@ -112,11 +124,22 @@ replace_in_html(){
 
 echo pre-processing...
 for i in $LIST; do copy_file $i; done
+if [[ -n "${site_modules_path}" && -f ../css/site_modules.css ]]; then
+    cp -f -T ../css/site_modules.css "$(dirname "${site_modules_path}")/${site_modules_replace}"
+fi
+if [[ -n "${ext_path}" && -f ../css/ext.css ]]; then
+    cp -f -T ../css/ext.css "$(dirname "${ext_path}")/${ext_replace}"
+fi
 
 # backup extra fonts
 mkdir -p font_temp
 for i in $extra_fonts; do
-    find -iname $i -exec cp {} font_temp/$i \;
+    find -iname $i -exec cp {} font_temp/$i \; -quit
+done
+for i in $extra_fonts; do
+    if [[ ! -f font_temp/$i && -f "reference/zh.cppreference.com/$i" ]]; then
+        cp -f "reference/zh.cppreference.com/$i" "font_temp/$i"
+    fi
 done
 
 # original preprocess
@@ -130,7 +153,9 @@ elif [[ -d 'output/common' ]]; then
 fi
 if [[ -d $font_path ]]; then
 for i in $extra_fonts; do
-    cp -f font_temp/$i $font_path/$i
+    if [[ -f font_temp/$i ]]; then
+        cp -f font_temp/$i $font_path/$i
+    fi
 done
 fi
 rm -rf font_temp
@@ -151,13 +176,15 @@ find -iname '*.css' | xargs sed -i -r 's/\.\.\/([^.]+?)\.ttf/\1.ttf/ig'
 
 # workaround navbar-inv-tab.png
 find -iname '*.css' | xargs sed -i -r 's/https?:\/\/..\.cppreference\.com\/mwiki\/skins\/cppreference2\/images/skins\/cppreference2\/images/ig'
-pushd "${font_path}/skins/cppreference2/images"
-wget -nv 'https://en.cppreference.com/mwiki/skins/cppreference2/images/navbar-inv-tab.png'
-popd
+if [[ -d "${font_path}/skins/cppreference2/images" ]]; then
+    cp -n skins/cppreference2/images/navbar-inv-tab.png "${font_path}/skins/cppreference2/images/navbar-inv-tab.png" 2>/dev/null || true
+fi
 echo Cleaning up carbonads scripts
 find ./ -iname '*.html' -type f | xargs -P "${CPUS}" sed -i -r 's/<script.+?carbonads\.com\/carbon\.js.+?<\/script>//ig' 
 echo Cleaning up googletagmanager scripts
 find ./ -iname '*.html' -type f | xargs -P "${CPUS}" sed -i -r 's/<script.+?googletagmanager\.com.+?<\/script>//ig'
+echo Cleaning up cloudflare insights scripts
+find ./ -iname '*.html' -type f | xargs -P "${CPUS}" sed -i -r 's/<script[^>]+static\.cloudflareinsights\.com[^>]*><\/script>//ig'
 
 rm -rf 'reference/zh.cppreference.com'
 
