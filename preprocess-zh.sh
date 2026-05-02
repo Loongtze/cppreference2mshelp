@@ -38,6 +38,11 @@ VERSION="${VERSION:-$(date +%Y%m%d)}"
 sed -i "/^VERSION=/cVERSION=${VERSION}" Makefile
 make source
 
+pushd cppreference-doc/reference
+python3 ../../fix_mirror.py
+wget --force-directories --retry-connrefused --waitretry=2 --read-timeout=13 --trust-server-names -i urls_to_download.txt
+rm -f urls_to_download.txt
+popd
 
 # init files and vars
 startup_scripts_replace="startup_scripts.js"
