@@ -576,7 +576,7 @@ sup.reference {
     }
 
     .filehistory a img, #file img:hover {
-        background: white url("Checker-16x16.png") repeat
+        background: white url("skins/common/images/Checker-16x16.png") repeat
     }
 
     li span.deleted, span.history-deleted {
@@ -833,7 +833,7 @@ sup.reference {
     }
 
     a.feedlink {
-        background: url("feed-icon.png") center left no-repeat;
+        background: url("skins/common/images/feed-icon.png") center left no-repeat;
         padding-left: 16px
     }
 
@@ -1149,7 +1149,7 @@ sup.reference {
     }
 
     .mw-ajax-loader {
-        background-image: url("ajax-loader.gif");
+        background-image: url("skins/common/images/ajax-loader.gif");
         background-position: center center;
         background-repeat: no-repeat;
         padding: 16px;
@@ -1160,7 +1160,7 @@ sup.reference {
     .mw-small-spinner {
         padding: 10px !important;
         margin-right: 0.6em;
-        background-image: url("spinner.gif");
+        background-image: url("skins/common/images/spinner.gif");
         background-position: center center;
         background-repeat: no-repeat
     }
@@ -1227,7 +1227,7 @@ sup.reference {
         margin-left: 2px;
         margin-bottom: -8px;
         padding: 0 0 0 15px;
-        background-image: url("help-question.gif");
+        background-image: url("skins/common/images/help-question.gif");
         background-position: left center;
         background-repeat: no-repeat;
         cursor: pointer;
@@ -1263,7 +1263,7 @@ sup.reference {
 
     .tipsy-arrow {
         position: absolute;
-        background: url("tipsy-arrow.gif") no-repeat top left;
+        background: url("skins/common/images/tipsy-arrow.gif") no-repeat top left;
         width: 13px;
         height: 13px
     }
@@ -1460,7 +1460,7 @@ sup.reference {
 
     #pt-userpage a {
         padding-right: 21px !important;
-        background: url("arrow-down-icon1.png") no-repeat scroll right
+        background: url("skins/cppreference2/images/arrow-down-icon1.png") no-repeat scroll right
     }
 
     div#cpp-head-search {
@@ -1521,7 +1521,7 @@ sup.reference {
 
     div#cpp-head-second-base {
         background: white;
-        background-image: url("page-fade.png");
+        background-image: url("skins/cppreference2/images/page-fade.png");
         background-position: bottom left;
         background-repeat: repeat-x
     }
@@ -1556,7 +1556,7 @@ sup.reference {
     }
 
     div.vectorTabs:first-child {
-        background-image: url("tab-break.png");
+        background-image: url("skins/cppreference2/images/tab-break.png");
         background-position: bottom left;
         background-repeat: no-repeat;
         padding-left: 1px
@@ -1582,20 +1582,20 @@ sup.reference {
         height: 100%;
         margin: 0;
         padding: 0;
-        background-image: url("tab-normal-fade.png");
+        background-image: url("skins/cppreference2/images/tab-normal-fade.png");
         background-position: bottom left;
         background-repeat: repeat-x;
         white-space: nowrap
     }
 
     div.vectorTabs ul li.selected {
-        background-image: url("tab-current-fade.png")
+        background-image: url("skins/cppreference2/images/tab-current-fade.png")
     }
 
     div.vectorTabs span {
         display: inline-block;
         height: 100%;
-        background-image: url("tab-break.png");
+        background-image: url("skins/cppreference2/images/tab-break.png");
         background-position: bottom right;
         background-repeat: no-repeat;
         padding-left: 1px
@@ -1647,14 +1647,14 @@ sup.reference {
     }
 
     div.vectorMenu {
-        background-image: url("tab-current-fade.png");
+        background-image: url("skins/cppreference2/images/tab-current-fade.png");
         background-position: bottom left;
         background-repeat: repeat-x;
         height: 2.5em
     }
 
     div.vectorMenu h5 {
-        background-image: url("tab-break.png");
+        background-image: url("skins/cppreference2/images/tab-break.png");
         background-position: bottom right;
         background-repeat: no-repeat;
         padding-left: 1px;
@@ -1667,11 +1667,11 @@ sup.reference {
         line-height: 1.0em;
         font-weight: normal;
         font-size: 0.7em;
-        background: url("arrow-down-icon1.png") no-repeat scroll right 1.6em
+        background: url("skins/cppreference2/images/arrow-down-icon1.png") no-repeat scroll right 1.6em
     }
 
     div.vectorMenuFocus h5 span {
-        background: url("arrow-down-icon2.png") no-repeat scroll right 1.6em
+        background: url("skins/cppreference2/images/arrow-down-icon2.png") no-repeat scroll right 1.6em
     }
 
     div.vectorMenu div.menu {
@@ -1746,7 +1746,7 @@ sup.reference {
         border-radius: 3px;
         color: black;
         background-color: white;
-        background-image: url("search-fade.png");
+        background-image: url("skins/cppreference2/images/search-fade.png");
         background-position: top left;
         background-repeat: repeat-x
     }
@@ -1861,7 +1861,7 @@ sup.reference {
         clear: both;
         margin: 0 !important;
         padding: 0 !important;
-        background-image: url("preferences-break.png");
+        background-image: url("skins/cppreference2/images/preferences-break.png");
         background-position: bottom left;
         background-repeat: no-repeat
     }
@@ -1875,7 +1875,7 @@ sup.reference {
         white-space: nowrap;
         list-style-type: none;
         list-style-image: none;
-        background-image: url("preferences-break.png");
+        background-image: url("skins/cppreference2/images/preferences-break.png");
         background-position: bottom right;
         background-repeat: no-repeat
     }
@@ -1899,7 +1899,7 @@ sup.reference {
     }
 
     #preftoc li.selected a {
-        background-image: url("preferences-fade.png");
+        background-image: url("skins/cppreference2/images/preferences-fade.png");
         background-position: bottom;
         background-repeat: repeat-x;
         color: #333333;
@@ -1914,7 +1914,7 @@ sup.reference {
         clear: both;
         border: solid 1px #cccccc;
         background-color: #f9f9f9;
-        background-image: url("preferences-base.png")
+        background-image: url("skins/cppreference2/images/preferences-base.png")
     }
 
     #preferences fieldset {
@@ -2384,47 +2384,47 @@ sup.reference {
     }
 
     div#content a.external, div#content a.external[href ^="gopher://"] {
-        background: url("external-link-ltr-icon.png") center right no-repeat;
+        background: url("skins/cppreference2/images/external-link-ltr-icon.png") center right no-repeat;
         padding-right: 13px
     }
 
     div#content a.external[href ^="https://"], .link-https {
-        background: url("lock-icon.png") center right no-repeat;
+        background: url("skins/cppreference2/images/lock-icon.png") center right no-repeat;
         padding-right: 13px
     }
 
     div#content a.external[href ^="mailto:"], .link-mailto {
-        background: url("mail-icon.png") center right no-repeat;
+        background: url("skins/cppreference2/images/mail-icon.png") center right no-repeat;
         padding-right: 13px
     }
 
     div#content a.external[href ^="news://"] {
-        background: url("news-icon.png") center right no-repeat;
+        background: url("skins/cppreference2/images/news-icon.png") center right no-repeat;
         padding-right: 13px
     }
 
     div#content a.external[href ^="ftp://"], .link-ftp {
-        background: url("file-icon.png") center right no-repeat;
+        background: url("skins/cppreference2/images/file-icon.png") center right no-repeat;
         padding-right: 13px
     }
 
     div#content a.external[href ^="irc://"], div#content a.external[href ^="ircs://"], .link-irc {
-        background: url("talk-icon.png") center right no-repeat;
+        background: url("skins/cppreference2/images/talk-icon.png") center right no-repeat;
         padding-right: 13px
     }
 
     div#content a.external[href $=".ogg"], div#content a.external[href $=".OGG"], div#content a.external[href $=".mid"], div#content a.external[href $=".MID"], div#content a.external[href $=".midi"], div#content a.external[href $=".MIDI"], div#content a.external[href $=".mp3"], div#content a.external[href $=".MP3"], div#content a.external[href $=".wav"], div#content a.external[href $=".WAV"], div#content a.external[href $=".wma"], div#content a.external[href $=".WMA"], .link-audio {
-        background: url("audio-icon.png") center right no-repeat;
+        background: url("skins/cppreference2/images/audio-icon.png") center right no-repeat;
         padding-right: 13px
     }
 
     div#content a.external[href $=".ogm"], div#content a.external[href $=".OGM"], div#content a.external[href $=".avi"], div#content a.external[href $=".AVI"], div#content a.external[href $=".mpeg"], div#content a.external[href $=".MPEG"], div#content a.external[href $=".mpg"], div#content a.external[href $=".MPG"], .link-video {
-        background: url("video-icon.png") center right no-repeat;
+        background: url("skins/cppreference2/images/video-icon.png") center right no-repeat;
         padding-right: 13px
     }
 
     div#content a.external[href $=".pdf"], div#content a.external[href $=".PDF"], div#content a.external[href *=".pdf#"], div#content a.external[href *=".PDF#"], div#content a.external[href *=".pdf?"], div#content a.external[href *=".PDF?"], .link-document {
-        background: url("document-icon.png") center right no-repeat;
+        background: url("skins/cppreference2/images/document-icon.png") center right no-repeat;
         padding-right: 13px
     }
 
@@ -2459,7 +2459,7 @@ sup.reference {
     }
 
     #pt-userpage, #pt-anonuserpage, #pt-login {
-        background: url("user-icon.png") left top no-repeat;
+        background: url("skins/cppreference2/images/user-icon.png") left top no-repeat;
         padding-left: 15px !important;
         text-transform: none
     }
@@ -2494,7 +2494,7 @@ sup.reference {
         margin-top: -0.8em !ie;
         height: 0;
         overflow: hidden;
-        background-image: url("watch-icons.png")
+        background-image: url("skins/cppreference2/images/watch-icons.png")
     }
 
     #ca-unwatch.icon a {
@@ -2514,7 +2514,7 @@ sup.reference {
     }
 
     #ca-unwatch.icon a.loading, #ca-watch.icon a.loading {
-        background-image: url("watch-icon-loading.gif");
+        background-image: url("skins/cppreference2/images/watch-icon-loading.gif");
         background-position: 5px 60%
     }
 
@@ -2523,7 +2523,7 @@ sup.reference {
     }
 
     div.vectorTabs ul {
-        background-image: url("tab-break.png");
+        background-image: url("skins/cppreference2/images/tab-break.png");
         background-position: right bottom;
         background-repeat: no-repeat
     }

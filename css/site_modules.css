@@ -75,7 +75,7 @@ strong, b {
 }
 
 #content a.extiw, #content a.extiw:active {
-    background: url("external-link-ltr-icon.png") no-repeat scroll right center transparent !important;
+    background: url("skins/cppreference2/images/external-link-ltr-icon.png") no-repeat scroll right center transparent !important;
     padding: 0 13px 0 0 !important
 }
 
@@ -476,13 +476,13 @@ body.cpp-navbar div#contentSub, body.cpp-page-template div#contentSub {
 
 .t-navbar-sep {
     width: 8px;
-    background-image: url("navbar-tab.png");
+    background-image: url("skins/cppreference2/images/navbar-tab.png");
     background-repeat: no-repeat;
     background-position: right bottom
 }
 
 .t-navbar-sep:first-child {
-    background-image: url("navbar-inv-tab.png");
+    background-image: url("skins/cppreference2/images/navbar-inv-tab.png");
     background-repeat: no-repeat;
     background-position: left bottom;
     border-bottom-width: 0
@@ -1175,7 +1175,7 @@ span.citation, cite {
 }
 
 div#content a[href$=".pdf"].external, div#content a[href*=".pdf?"].external, div#content a[href*=".pdf#"].external, div#content a[href$=".PDF"].external, div#content a[href*=".PDF?"].external, div#content a[href*=".PDF#"].external, div#mw_content a[href$=".pdf"].external, div#mw_content a[href*=".pdf?"].external, div#mw_content a[href*=".pdf#"].external, div#mw_content a[href$=".PDF"].external, div#mw_content a[href*=".PDF?"].external, div#mw_content a[href*=".PDF#"].external {
-    background: url("Icons-mini-file_acrobat.gif") center right no-repeat;
+    background: url("images/2/23/Icons-mini-file_acrobat.gif") center right no-repeat;
     padding-right: 18px
 }
 

@@ -12,19 +12,6 @@ UPLOAD_CORRECT = "https://upload.cppreference.com/images/"
 UPLOAD_LOCAL_DIR = "upload.cppreference.com/images/"
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico")
 
-FONT_NAMES = (
-    "DejaVuSans.ttf",
-    "DejaVuSans-Bold.ttf",
-    "DejaVuSansMono.ttf",
-    "DejaVuSansMono-Bold.ttf",
-    "DejaVuSansMonoCondensed60.ttf",
-    "DejaVuSansMonoCondensed75.ttf",
-)
-STATIC_CPPREFERENCE_URLS = {
-    *(f"https://zh.cppreference.com/{name}" for name in FONT_NAMES),
-    "https://zh.cppreference.com/favicon.ico",
-}
-
 
 def local_prefix(root, file_path):
     rel_path = file_path.relative_to(root)
@@ -79,11 +66,6 @@ def rewrite_vendor_urls(content, root, file_path, urls_to_download):
         r'https://cdn\.jsdelivr\.net/[^"\'<>\s)]+',
         replace, content)
 
-    for url in STATIC_CPPREFERENCE_URLS:
-        if url in content:
-            urls_to_download.add(url)
-            content = content.replace(url, prefix + local_path_for_url(url))
-
     return content
 
 
@@ -94,7 +76,7 @@ def main():
         if f.suffix.lower() in TARGET_EXTENSIONS and f.is_file()
     ]
 
-    urls_to_download = set(STATIC_CPPREFERENCE_URLS)
+    urls_to_download = set()
     files_modified = 0
 
     print(f"Scanning {len(all_files)} files...")

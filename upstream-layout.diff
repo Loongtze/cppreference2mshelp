@@ -1,11 +1,24 @@
 diff --git a/commands/preprocess.py b/commands/preprocess.py
-index 35aa7c3..4522255 100644
+index 35aa7c3..26cb22c 100644
 --- a/commands/preprocess.py
 +++ b/commands/preprocess.py
-@@ -33,12 +33,26 @@ def rmtree_if_exists(dir):
+@@ -28,17 +28,75 @@ import urllib.parse
+ from lxml import etree
+
+
++LOADER_ALIASES = (
++        'startup_scripts.js',
++        'site_scripts.js',
++        'site_modules.css',
++        'skin_scripts.js',
++        'ext.css')
++
++
+ def rmtree_if_exists(dir):
+     if os.path.isdir(dir):
          shutil.rmtree(dir)
- 
- 
+
+
 +def copy_if_exists(src, dst):
 +    if os.path.exists(src):
 +        os.makedirs(os.path.dirname(dst), exist_ok=True)
@@ -18,19 +31,55 @@ index 35aa7c3..4522255 100644
      for fn in os.listdir(srcdir):
          shutil.move(os.path.join(srcdir, fn),
                      os.path.join(dstdir, fn))
- 
- 
+
+
 +def move_tree_contents_to_dir(srcdir, dstdir):
-+    if os.path.isdir(srcdir):
-+        os.makedirs(dstdir, exist_ok=True)
-+        move_dir_contents_to_dir(srcdir, dstdir)
++    if not os.path.isdir(srcdir):
++        return
++    os.makedirs(dstdir, exist_ok=True)
++    for fn in os.listdir(srcdir):
++        src = os.path.join(srcdir, fn)
++        dst = os.path.join(dstdir, fn)
++        if os.path.isdir(src) and os.path.isdir(dst):
++            move_tree_contents_to_dir(src, dst)
++            shutil.rmtree(src)
++        else:
++            shutil.move(src, dst)
++
++
++def copy_tree_contents_to_dir(srcdir, dstdir):
++    if not os.path.isdir(srcdir):
++        return
++    os.makedirs(dstdir, exist_ok=True)
++    for fn in os.listdir(srcdir):
++        src = os.path.join(srcdir, fn)
++        dst = os.path.join(dstdir, fn)
++        if os.path.isdir(src):
++            if os.path.isdir(dst):
++                copy_tree_contents_to_dir(src, dst)
++            else:
++                shutil.copytree(src, dst)
++        else:
++            shutil.copy2(src, dst)
++
++
++def normalize_cppreference2_skin(data_path):
++    copy_tree_contents_to_dir(
++            os.path.join(data_path, 'skins', 'Cppreference2',
++                         'resources', 'images'),
++            os.path.join(data_path, 'skins', 'cppreference2', 'images'))
++    copy_if_exists(
++            os.path.join('skins', 'cppreference2', 'images',
++                         'navbar-inv-tab.png'),
++            os.path.join(data_path, 'skins', 'cppreference2', 'images',
++                         'navbar-inv-tab.png'))
 +
 +
  def rearrange_archive(root):
      # rearrange the archive. {root} here is output/reference
- 
-@@ -56,33 +70,64 @@ def rearrange_archive(root):
- 
+
+@@ -56,33 +114,72 @@ def rearrange_archive(root):
+
      data_path = os.path.join(root, 'common')
      rmtree_if_exists(data_path)
 -    shutil.move(os.path.join(root, 'upload.cppreference.com/mwiki'), data_path)
@@ -42,10 +91,11 @@ index 35aa7c3..4522255 100644
 +    upload_images = os.path.join(upload_root, 'images')
 +    if os.path.isdir(upload_mwiki):
 +        move_dir_contents_to_dir(upload_mwiki, data_path)
-+    elif os.path.isdir(upload_images):
-+        shutil.move(upload_images, os.path.join(data_path, 'images'))
++    if os.path.isdir(upload_images):
++        move_tree_contents_to_dir(upload_images,
++                                  os.path.join(data_path, 'images'))
 +    shutil.rmtree(upload_root, ignore_errors=True)
- 
+
      for lang in ["zh"]:
          path = os.path.join(root, lang + ".cppreference.com/")
 -        src_html_path = path + "w/"
@@ -53,26 +103,27 @@ index 35aa7c3..4522255 100644
 +        src_html_path = os.path.join(path, "w")
 +        src_data_path = os.path.join(path, "mwiki")
          html_path = os.path.join(root, lang)
- 
+
          if os.path.isdir(src_html_path):
              shutil.move(src_html_path, html_path)
 +        elif os.path.isdir(path):
 +            os.makedirs(html_path)
 +            for fn in os.listdir(path):
-+                if fn in ('extensions', 'resources', 'rest.php', 'skins'):
++                if fn in ('extensions', 'mwiki', 'resources',
++                          'rest.php', 'skins'):
 +                    continue
-+                if fn.startswith('load.php'):
++                if fn.startswith('load.php') or fn in LOADER_ALIASES:
 +                    continue
 +                if fn.startswith('DejaVu') or fn == 'favicon.ico':
 +                    continue
 +                shutil.move(os.path.join(path, fn),
 +                            os.path.join(html_path, fn))
- 
+
          if os.path.isdir(src_data_path):
              # the skin files should be the same for all languages thus we
              # can merge everything
              move_dir_contents_to_dir(src_data_path, data_path)
--
+
 -        # also copy the custom fonts
 -        shutil.copy(os.path.join(path, 'DejaVuSansMonoCondensed60.ttf'),
 -                    data_path)
@@ -80,7 +131,7 @@ index 35aa7c3..4522255 100644
 -                    data_path)
 -        # and the favicon
 -        shutil.copy(os.path.join(path, 'favicon.ico'), data_path)
-+        else:
++        if os.path.isdir(path):
 +            for dirname in ('extensions', 'resources', 'rest.php', 'skins'):
 +                move_tree_contents_to_dir(
 +                    os.path.join(path, dirname),
@@ -88,6 +139,11 @@ index 35aa7c3..4522255 100644
 +            for fn in fnmatch.filter(os.listdir(path), 'load.php*'):
 +                shutil.move(os.path.join(path, fn),
 +                            os.path.join(data_path, fn))
++            for fn in LOADER_ALIASES:
++                copy_if_exists(os.path.join(path, fn),
++                               os.path.join(data_path, fn))
++
++        normalize_cppreference2_skin(data_path)
 +
 +        for font in (
 +                'DejaVuSans.ttf',
@@ -100,14 +156,14 @@ index 35aa7c3..4522255 100644
 +                           os.path.join(data_path, font))
 +        copy_if_exists(os.path.join(path, 'favicon.ico'),
 +                       os.path.join(data_path, 'favicon.ico'))
- 
+
          # remove what's left
 -        # shutil.rmtree(path)
 +        shutil.rmtree(path, ignore_errors=True)
- 
+
      # remove the XML source file
      for fn in fnmatch.filter(os.listdir(root), 'cppreference-export*.xml'):
-@@ -92,48 +137,104 @@ def rearrange_archive(root):
+@@ -92,48 +189,104 @@ def rearrange_archive(root):
  def convert_loader_name(fn):
      # Converts complex URL to resources supplied by MediaWiki loader to a
      # simplified name
@@ -181,8 +237,8 @@ index 35aa7c3..4522255 100644
 +    if only not in ('styles', 'scripts'):
 +        parts.append(sanitize(only))
 +    return '_'.join(parts) + ext
- 
- 
+
+
  def build_rename_map(root):
 -    # Returns a rename map: a map from old to new file name
 +    # Returns a rename map keyed by source path and, where unambiguous, source
@@ -195,7 +251,7 @@ index 35aa7c3..4522255 100644
      query = re.compile(r'[\?@].*')
 -    result = dict()
 +    result = {}
- 
+
 -    # find files with invalid names -> rename all occurrences
 -    for fn in set(fn for _, _, filenames in os.walk(root) for fn in filenames):
 +    def candidate_name(fn):
@@ -214,7 +270,7 @@ index 35aa7c3..4522255 100644
 -            result[fn] = new_fn
 +            return new_fn
 +        return fn
- 
+
 -    # find files that conflict on case-insensitive filesystems
      for dir, _, filenames in os.walk(root):
          seen = dict()
@@ -237,9 +293,9 @@ index 35aa7c3..4522255 100644
 +                result[os.path.join(dir, old_fn)] = new_fn
 +                result.setdefault(old_fn, new_fn)
              seen[low] += 1
- 
+
      return result
-@@ -144,15 +245,7 @@ def rename_files(root, rename_map):
+@@ -144,15 +297,7 @@ def rename_files(root, rename_map):
                          for dir, _, filenames in os.walk(root)
                          for fn in filenames):
          src_path = os.path.join(dir, old_fn)
@@ -256,19 +312,19 @@ index 35aa7c3..4522255 100644
          if new_fn:
              dst_path = os.path.join(dir, new_fn)
              print("Renaming {0}\n      to {1}".format(src_path, dst_path))
-@@ -171,6 +264,8 @@ def find_html_files(root):
+@@ -171,6 +316,8 @@ def find_html_files(root):
  def is_loader_link(target):
      if re.match(r'https?://[a-z]+\.cppreference\.com/mwiki/load\.php', target):
          return True
 +    if re.match(r'https?://[a-z]+\.cppreference\.com/load\.php', target):
 +        return True
      return False
- 
- 
-@@ -212,26 +307,64 @@ def is_external_link(target):
+
+
+@@ -212,26 +359,64 @@ def is_external_link(target):
      return url.scheme != '' or url.netloc != ''
- 
- 
+
+
 +def transform_external_asset_link(target, file, root):
 +    parsed = urllib.parse.urlparse(target)
 +    local_hosts = ('zh.cppreference.com', 'upload.cppreference.com',
@@ -283,7 +339,7 @@ index 35aa7c3..4522255 100644
      # urlparse returns (scheme, host, path, params, query, fragment)
      _, _, path, params, _, fragment = urllib.parse.urlparse(target)
      assert params == ''
- 
+
 +    raw_path = path
      path = urllib.parse.unquote(path)
 -    path = path.replace('../../upload.cppreference.com/mwiki/', '../common/')
@@ -319,7 +375,7 @@ index 35aa7c3..4522255 100644
 +                  r'\1', path, flags=re.IGNORECASE)
 +    path = move_common_path(path)
 +    raw_path = move_common_path(raw_path)
- 
+
      dir, fn = os.path.split(path)
 -    new_fn = rename_map.get(fn)
 -    if new_fn:
@@ -341,18 +397,18 @@ index 35aa7c3..4522255 100644
 +    new_fn = rename_map.get(raw_fn, new_fn)
      if new_fn:
          path = os.path.join(dir, new_fn)
- 
-@@ -251,6 +384,9 @@ def transform_link(rename_map, target, file, root):
+
+@@ -251,6 +436,9 @@ def transform_link(rename_map, target, file, root):
          return transform_ranges_placeholder(target, file, root)
- 
+
      if is_external_link(target):
 +        transformed = transform_external_asset_link(target, file, root)
 +        if transformed != target:
 +            return trasform_relative_link(rename_map, transformed, file)
          return target
- 
+
      return trasform_relative_link(rename_map, target, file)
-@@ -314,14 +450,23 @@ def remove_see_also(html):
+@@ -314,14 +502,23 @@ def remove_see_also(html):
  def remove_google_analytics(html):
      for el in html.xpath('/html/body/script'):
          if el.get('src') is not None:
@@ -367,8 +423,8 @@ index 35aa7c3..4522255 100644
 +                    'googletagmanager.com' in el.text or \
 +                    "gtag('config'" in el.text:
                  el.getparent().remove(el)
- 
- 
+
+
 +def remove_cloudflare_insights(html):
 +    for el in html.xpath('//script[@src]'):
 +        if 'static.cloudflareinsights.com' in el.get('src'):
@@ -378,18 +434,18 @@ index 35aa7c3..4522255 100644
  # remove ads
  def remove_ads(html):
      # Carbon Ads
-@@ -396,6 +541,7 @@ def preprocess_html_file(root, fn, rename_map):
+@@ -396,6 +593,7 @@ def preprocess_html_file(root, fn, rename_map):
      remove_unused_external(html)
      remove_noprint(html, keep_footer=True)
      remove_google_analytics(html)
 +    remove_cloudflare_insights(html)
      remove_ads(html)
      remove_fileinfo(html)
- 
-@@ -421,6 +567,15 @@ def preprocess_css_file(fn):
- 
+
+@@ -421,13 +619,39 @@ def preprocess_css_file(fn):
+
      # note that query string is not used in css files
- 
+
 +    text = text.replace('https://zh.cppreference.com/', '')
 +    text = text.replace('https://upload.cppreference.com/mwiki/images/',
 +                        'images/')
@@ -399,15 +455,23 @@ index 35aa7c3..4522255 100644
 +                        'skins/')
 +    text = text.replace('https://en.cppreference.com/mwiki/skins/',
 +                        'skins/')
++    text = text.replace('https://upload.wikimedia.org/wikipedia/commons/'
++                        '5/5d/Checker-16x16.png',
++                        'skins/common/images/Checker-16x16.png')
      text = text.replace('../DejaVuSansMonoCondensed60.ttf',
                          'DejaVuSansMonoCondensed60.ttf')
      text = text.replace('../DejaVuSansMonoCondensed75.ttf',
-@@ -428,6 +583,15 @@ def preprocess_css_file(fn):
- 
+                         'DejaVuSansMonoCondensed75.ttf')
+
++    text = text.replace('../upload.cppreference.com/mwiki/images/',
++                        'images/')
++    text = text.replace('../upload.cppreference.com/images/',
++                        'images/')
      text = text.replace('../../upload.cppreference.com/mwiki/images/',
                          'images/')
 +    text = text.replace('../../upload.cppreference.com/images/',
 +                        'images/')
++    text = text.replace('mwiki/skins/', 'skins/')
 +    text = text.replace('Cppreference2/resources/images/',
 +                        'cppreference2/images/')
 +    text = re.sub(r'(\.(?:png|jpe?g|gif|svg|webp|ico))'
@@ -415,9 +479,19 @@ index 35aa7c3..4522255 100644
 +                  r'\1', text, flags=re.IGNORECASE)
 +    text = re.sub(r'(\.(?:png|jpe?g|gif|svg|webp|ico))#[^"\'\s)]+',
 +                  r'\1', text, flags=re.IGNORECASE)
- 
+
      # QT Help viewer doesn't understand nth-child
      text = text.replace('nth-child(1)', 'first-child')
+@@ -442,6 +666,9 @@ def preprocess_startup_script(fn):
+         text = f.read()
+
+     text = re.sub(r'document\.write\([^)]+\);', '', text)
++    text = re.sub(r'mw\.loader\.addSource\(\{.*?\}\);', '',
++                  text, flags=re.DOTALL)
++    text = re.sub(r'mw\.loader\.load\([^;]*\);', '', text)
+
+     with open(fn, "w", encoding='utf-8') as f:
+         f.write(text)
 diff --git a/preprocess.py b/preprocess.py
 index c2513aa..2f1c7e1 100755
 --- a/preprocess.py
@@ -427,13 +501,13 @@ index c2513aa..2f1c7e1 100755
  import concurrent.futures
  import os
 -import shutil
- 
+
  from commands import preprocess
- 
+
 @@ -72,12 +71,16 @@ def main():
- 
+
      # clean the css files
- 
+
 -    for fn in [os.path.join(root, 'common/site_modules.css'),
 -               os.path.join(root, 'common/ext.css')]:
 -        preprocess.preprocess_css_file(fn)
@@ -441,7 +515,7 @@ index c2513aa..2f1c7e1 100755
 +    for filename in os.listdir(common):
 +        if filename.endswith('.css'):
 +            preprocess.preprocess_css_file(os.path.join(common, filename))
- 
+
 -    preprocess.preprocess_startup_script(
 -        os.path.join(root, 'common/startup_scripts.js'))
 +    for filename in os.listdir(common):
@@ -449,6 +523,6 @@ index c2513aa..2f1c7e1 100755
 +                filename.endswith('.js'):
 +            preprocess.preprocess_startup_script(
 +                    os.path.join(common, filename))
- 
- 
+
+
  if __name__ == "__main__":

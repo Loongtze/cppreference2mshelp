@@ -65,9 +65,70 @@ ext_path="$(find reference -type f | grep -iP 'load\.php.*?modules=.*ext.*&only=
 
 LIST="startup_scripts site_scripts site_modules skin_scripts ext"
 extra_fonts="DejaVuSans.ttf DejaVuSans-Bold.ttf DejaVuSansMono.ttf DejaVuSansMono-Bold.ttf DejaVuSansMonoCondensed60.ttf DejaVuSansMonoCondensed75.ttf"
+legacy_archive="../cppreference-unprocessed-20250404.7z"
 
 _7Z="${_7Z:-$(which 7z)}"
 CPUS="$(cat /proc/cpuinfo | grep -c '^processor')"
+
+restore_from_legacy_archive(){
+    local archive="$1"
+    local source="$2"
+    local target="$3"
+    if [[ ! -f "${archive}" || -e "${target}" ]]; then
+        return 0
+    fi
+    mkdir -p "$(dirname "${target}")"
+    local temp="${target}.tmp"
+    if "${_7Z}" x -so "${archive}" "${source}" > "${temp}" && [[ -s "${temp}" ]]; then
+        mv -f "${temp}" "${target}"
+        return 0
+    fi
+    rm -f "${temp}"
+}
+
+restore_legacy_assets(){
+    local archive="$1"
+    if [[ ! -f "${archive}" ]]; then
+        echo "legacy archive ${archive} not found; skipping static fallback restore"
+        return 0
+    fi
+
+    for i in $extra_fonts; do
+        restore_from_legacy_archive \
+            "${archive}" \
+            "reference/zh.cppreference.com/${i}" \
+            "reference/zh.cppreference.com/${i}"
+    done
+    restore_from_legacy_archive \
+        "${archive}" \
+        "reference/zh.cppreference.com/favicon.ico" \
+        "reference/zh.cppreference.com/favicon.ico"
+
+    while IFS= read -r path; do
+        [[ -n "${path}" ]] || continue
+        if [[ "${path}" == *"/mwiki/skins/cppreference2/images/"* ]]; then
+            local name="${path##*/}"
+            name="${name%@*}"
+            if [[ -e "reference/zh.cppreference.com/skins/Cppreference2/resources/images/${name}" ]] ||
+               compgen -G "reference/zh.cppreference.com/skins/Cppreference2/resources/images/${name}@*" >/dev/null; then
+                continue
+            fi
+        fi
+        local target="${path#reference/zh.cppreference.com/mwiki/}"
+        restore_from_legacy_archive \
+            "${archive}" \
+            "${path}" \
+            "reference/zh.cppreference.com/mwiki/${target}"
+    done < <("${_7Z}" l -ba "${archive}" | awk '{print $NF}' | grep -E \
+        'reference/zh\.cppreference\.com/mwiki/skins/(common|cppreference2|vector)/images/.*\.(png|gif|ico)(@.*)?$' || true)
+
+    restore_from_legacy_archive \
+        "${archive}" \
+        "reference/upload.cppreference.com/mwiki/images/2/23/Icons-mini-file_acrobat.gif" \
+        "reference/upload.cppreference.com/mwiki/images/2/23/Icons-mini-file_acrobat.gif"
+}
+
+restore_legacy_assets "${legacy_archive}"
 
 # package un-processed files
 "${_7Z}" a -mx9 -myx9  -mqs "../cppreference-unprocessed-${VERSION}.7z" ./reference
