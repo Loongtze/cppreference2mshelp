@@ -1,0 +1,57 @@
+diff --git a/commands/preprocess_cssless.py b/commands/preprocess_cssless.py
+index 0c29d96..94edc3f 100644
+--- a/commands/preprocess_cssless.py
++++ b/commands/preprocess_cssless.py
+@@ -19,0 +20 @@ import functools
++import inspect
+@@ -28 +28,0 @@ from lxml.etree import strip_elements
+-import premailer
+@@ -31,2 +31,21 @@ from premailer import Premailer
+-premailer_version = premailer.__version__.split('.')
+-premailer_is_new=len(premailer_version) >= 2 and int(premailer_version[0]) >= 3 and int(premailer_version[1]) >= 9
++
++def premailer_options(src_path):
++    options = {
++        'base_url': src_path,
++        'disable_link_rewrites': True,
++        'remove_classes': True,
++    }
++    parameters = inspect.signature(Premailer.__init__).parameters
++    if 'allow_loading_external_files' in parameters:
++        options['allow_loading_external_files'] = True
++    if 'disable_leftover_css' in parameters:
++        options['disable_leftover_css'] = True
++    return options
++
++
++class CsslessPremailer(Premailer):
++    def _css_rules_to_string(self, rules):
++        # Leftover CSS is stripped after inlining. Premailer 3.7 can crash
++        # serializing nested @media leftovers, so keep the cssless pass empty.
++        return ''
++
+@@ -78,7 +97 @@ def preprocess_html_merge_css(root, src_path):
+-        if premailer_is_new:
+-            premailer = Premailer(root, base_url=src_path,
+-                                  disable_link_rewrites=True, remove_classes=True,
+-                                  allow_loading_external_files=True)
+-        else:
+-            premailer = Premailer(root, base_url=src_path,
+-                                  disable_link_rewrites=True, remove_classes=True)
++        premailer = CsslessPremailer(root, **premailer_options(src_path))
+diff --git a/preprocess_qch.py b/preprocess_qch.py
+index 856afb5..ea97aba 100755
+--- a/preprocess_qch.py
++++ b/preprocess_qch.py
+@@ -66,0 +67 @@ def main():
++            src_path, dst_path = paths_list[i]
+@@ -68,2 +69,7 @@ def main():
+-                    i, len(paths_list), paths_list[i][1]))
+-            output = future.result()
++                    i, len(paths_list), dst_path))
++            try:
++                output = future.result()
++            except Exception as exc:
++                raise RuntimeError(
++                    'failed to preprocess {} -> {}'.format(
++                        src_path, dst_path)) from exc

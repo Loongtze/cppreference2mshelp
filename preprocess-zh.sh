@@ -89,6 +89,10 @@ patch_marker_present(){
             grep -q 'allow_loading_external_files=True' \
                 commands/preprocess_cssless.py
         ;;
+        ../preprocess_premailer.diff)
+            grep -q 'CsslessPremailer' commands/preprocess_cssless.py &&
+                grep -q 'failed to preprocess' preprocess_qch.py
+        ;;
         ../upstream-layout.diff)
             grep -q 'LOADER_ALIASES' commands/preprocess.py &&
                 grep -q 'convert_loader_name' commands/preprocess.py &&
@@ -102,7 +106,13 @@ patch_marker_present(){
 
 apply_patch_once(){
     local patch="$1"
-    if git apply --reverse --check "${patch}" >/dev/null 2>&1; then
+    local apply_args=(-3)
+    local check_args=(--reverse --check)
+    if [[ "${patch}" = "../preprocess_premailer.diff" ]]; then
+        apply_args=(--unidiff-zero)
+        check_args=(--unidiff-zero --reverse --check)
+    fi
+    if git apply "${check_args[@]}" "${patch}" >/dev/null 2>&1; then
         echo "patch already applied: ${patch}"
         return 0
     fi
@@ -111,7 +121,7 @@ apply_patch_once(){
         return 0
     fi
     echo "applying patch: ${patch}"
-    git apply -3 "${patch}"
+    git apply "${apply_args[@]}" "${patch}"
 }
 
 ensure_raw_reference(){
@@ -186,9 +196,11 @@ else
 fi
 
 if [[ "${UPSTREAM:-}" = "p12tic" ]]; then
-    patches=(../zh-p12tic.diff ../preprocess_cssless.diff ../upstream-layout.diff)
+    patches=(../zh-p12tic.diff ../preprocess_cssless.diff \
+        ../preprocess_premailer.diff ../upstream-layout.diff)
 else
-    patches=(../zh.diff ../preprocess_cssless.diff ../upstream-layout.diff)
+    patches=(../zh.diff ../preprocess_cssless.diff \
+        ../preprocess_premailer.diff ../upstream-layout.diff)
 fi
 for patch in "${patches[@]}"; do
     apply_patch_once "${patch}"
