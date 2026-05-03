@@ -41,6 +41,10 @@ rm -rf chmhelp
 # 防止loadHTMLFile乱码
 find -iname '*.html' | xargs -P "${CPUS}" sed -i 's/<head>/<head><meta charset="utf-8">/ig'
 
+if [[ ! -f zh/index.html ]]; then
+  cp zh/首页.html zh/index.html
+fi
+
 # 生成用于打包chm的文件
 "${PHP}" make_chm.php
 
