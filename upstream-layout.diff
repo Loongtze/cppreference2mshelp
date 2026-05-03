@@ -1,11 +1,11 @@
 diff --git a/commands/preprocess.py b/commands/preprocess.py
-index 35aa7c3..26cb22c 100644
+index 35aa7c3..65ebf39 100644
 --- a/commands/preprocess.py
 +++ b/commands/preprocess.py
 @@ -28,17 +28,75 @@ import urllib.parse
  from lxml import etree
-
-
+ 
+ 
 +LOADER_ALIASES = (
 +        'startup_scripts.js',
 +        'site_scripts.js',
@@ -17,8 +17,8 @@ index 35aa7c3..26cb22c 100644
  def rmtree_if_exists(dir):
      if os.path.isdir(dir):
          shutil.rmtree(dir)
-
-
+ 
+ 
 +def copy_if_exists(src, dst):
 +    if os.path.exists(src):
 +        os.makedirs(os.path.dirname(dst), exist_ok=True)
@@ -31,8 +31,8 @@ index 35aa7c3..26cb22c 100644
      for fn in os.listdir(srcdir):
          shutil.move(os.path.join(srcdir, fn),
                      os.path.join(dstdir, fn))
-
-
+ 
+ 
 +def move_tree_contents_to_dir(srcdir, dstdir):
 +    if not os.path.isdir(srcdir):
 +        return
@@ -77,9 +77,9 @@ index 35aa7c3..26cb22c 100644
 +
  def rearrange_archive(root):
      # rearrange the archive. {root} here is output/reference
-
+ 
 @@ -56,33 +114,72 @@ def rearrange_archive(root):
-
+ 
      data_path = os.path.join(root, 'common')
      rmtree_if_exists(data_path)
 -    shutil.move(os.path.join(root, 'upload.cppreference.com/mwiki'), data_path)
@@ -95,7 +95,7 @@ index 35aa7c3..26cb22c 100644
 +        move_tree_contents_to_dir(upload_images,
 +                                  os.path.join(data_path, 'images'))
 +    shutil.rmtree(upload_root, ignore_errors=True)
-
+ 
      for lang in ["zh"]:
          path = os.path.join(root, lang + ".cppreference.com/")
 -        src_html_path = path + "w/"
@@ -103,7 +103,7 @@ index 35aa7c3..26cb22c 100644
 +        src_html_path = os.path.join(path, "w")
 +        src_data_path = os.path.join(path, "mwiki")
          html_path = os.path.join(root, lang)
-
+ 
          if os.path.isdir(src_html_path):
              shutil.move(src_html_path, html_path)
 +        elif os.path.isdir(path):
@@ -118,12 +118,12 @@ index 35aa7c3..26cb22c 100644
 +                    continue
 +                shutil.move(os.path.join(path, fn),
 +                            os.path.join(html_path, fn))
-
+ 
          if os.path.isdir(src_data_path):
              # the skin files should be the same for all languages thus we
              # can merge everything
              move_dir_contents_to_dir(src_data_path, data_path)
-
+ 
 -        # also copy the custom fonts
 -        shutil.copy(os.path.join(path, 'DejaVuSansMonoCondensed60.ttf'),
 -                    data_path)
@@ -156,29 +156,18 @@ index 35aa7c3..26cb22c 100644
 +                           os.path.join(data_path, font))
 +        copy_if_exists(os.path.join(path, 'favicon.ico'),
 +                       os.path.join(data_path, 'favicon.ico'))
-
+ 
          # remove what's left
 -        # shutil.rmtree(path)
 +        shutil.rmtree(path, ignore_errors=True)
-
+ 
      # remove the XML source file
      for fn in fnmatch.filter(os.listdir(root), 'cppreference-export*.xml'):
-@@ -92,48 +189,104 @@ def rearrange_archive(root):
+@@ -92,48 +189,98 @@ def rearrange_archive(root):
  def convert_loader_name(fn):
      # Converts complex URL to resources supplied by MediaWiki loader to a
      # simplified name
 -    if "modules=site&only=scripts" in fn:
--        return "site_scripts.js"
--    if "modules=site&only=styles" in fn:
--        return "site_modules.css"
--    if "modules=startup&only=scripts" in fn:
--        return "startup_scripts.js"
--    if re.search("modules=skins.*&only=scripts", fn):
--        return "skin_scripts.js"
--    if re.search("modules=.*ext.*&only=styles", fn):
--        return "ext.css"
--    msg = 'Loader file {0} does not match any known files'.format(fn)
--    raise Exception(msg)
 +    parsed = urllib.parse.urlparse(fn)
 +    basename = os.path.basename(parsed.path)
 +    query = parsed.query
@@ -194,34 +183,34 @@ index 35aa7c3..26cb22c 100644
 +        raise Exception(msg)
 +
 +    params = urllib.parse.parse_qs(query, keep_blank_values=True)
-+    modules = params.get('modules', ['loader'])[0]
++    modules = urllib.parse.unquote(params.get('modules', ['loader'])[0])
 +    lang = params.get('lang', ['common'])[0]
 +    only = params.get('only', [''])[0]
 +    ext = '.css' if only == 'styles' else '.js' if only == 'scripts' else ''
 +
++    if modules == 'site' and only == 'scripts':
+         return "site_scripts.js"
+-    if "modules=site&only=styles" in fn:
++    if modules in ('site', 'site.styles') and only == 'styles':
+         return "site_modules.css"
+-    if "modules=startup&only=scripts" in fn:
++    if modules == 'startup' and only == 'scripts':
+         return "startup_scripts.js"
+-    if re.search("modules=skins.*&only=scripts", fn):
++    if modules == 'skins.cppreference2' and only == 'scripts':
+         return "skin_scripts.js"
+-    if re.search("modules=.*ext.*&only=styles", fn):
++    if modules in ('ext.pygments|skins.cppreference2',
++                   'ext.pygments|skins.cppreference2.styles') and \
++            only == 'styles':
+         return "ext.css"
+-    msg = 'Loader file {0} does not match any known files'.format(fn)
+-    raise Exception(msg)
++
 +    if 'lang' not in params:
-+        if modules == 'site' and only == 'scripts':
-+            return "site_scripts.js"
-+        if modules == 'site' and only == 'styles':
-+            return "site_modules.css"
-+        if modules == 'startup' and only == 'scripts':
-+            return "startup_scripts.js"
 +        if modules.startswith('skins.') and only == 'scripts':
 +            return "skin_scripts.js"
 +        if 'ext' in modules and only == 'styles':
-+            return "ext.css"
-+
-+    if lang == 'zh':
-+        if modules == 'site' and only == 'scripts':
-+            return "site_scripts.js"
-+        if modules in ('site', 'site.styles') and only == 'styles':
-+            return "site_modules.css"
-+        if modules == 'startup' and only == 'scripts':
-+            return "startup_scripts.js"
-+        if modules == 'skins.cppreference2' and only == 'scripts':
-+            return "skin_scripts.js"
-+        if modules == 'ext.pygments|skins.cppreference2.styles' and \
-+                only == 'styles':
 +            return "ext.css"
 +
 +    def sanitize(value):
@@ -237,8 +226,8 @@ index 35aa7c3..26cb22c 100644
 +    if only not in ('styles', 'scripts'):
 +        parts.append(sanitize(only))
 +    return '_'.join(parts) + ext
-
-
+ 
+ 
  def build_rename_map(root):
 -    # Returns a rename map: a map from old to new file name
 +    # Returns a rename map keyed by source path and, where unambiguous, source
@@ -251,7 +240,7 @@ index 35aa7c3..26cb22c 100644
      query = re.compile(r'[\?@].*')
 -    result = dict()
 +    result = {}
-
+ 
 -    # find files with invalid names -> rename all occurrences
 -    for fn in set(fn for _, _, filenames in os.walk(root) for fn in filenames):
 +    def candidate_name(fn):
@@ -270,7 +259,7 @@ index 35aa7c3..26cb22c 100644
 -            result[fn] = new_fn
 +            return new_fn
 +        return fn
-
+ 
 -    # find files that conflict on case-insensitive filesystems
      for dir, _, filenames in os.walk(root):
          seen = dict()
@@ -293,9 +282,9 @@ index 35aa7c3..26cb22c 100644
 +                result[os.path.join(dir, old_fn)] = new_fn
 +                result.setdefault(old_fn, new_fn)
              seen[low] += 1
-
+ 
      return result
-@@ -144,15 +297,7 @@ def rename_files(root, rename_map):
+@@ -144,15 +291,7 @@ def rename_files(root, rename_map):
                          for dir, _, filenames in os.walk(root)
                          for fn in filenames):
          src_path = os.path.join(dir, old_fn)
@@ -312,34 +301,73 @@ index 35aa7c3..26cb22c 100644
          if new_fn:
              dst_path = os.path.join(dir, new_fn)
              print("Renaming {0}\n      to {1}".format(src_path, dst_path))
-@@ -171,6 +316,8 @@ def find_html_files(root):
+@@ -171,12 +310,24 @@ def find_html_files(root):
  def is_loader_link(target):
      if re.match(r'https?://[a-z]+\.cppreference\.com/mwiki/load\.php', target):
          return True
 +    if re.match(r'https?://[a-z]+\.cppreference\.com/load\.php', target):
 +        return True
++    basename = os.path.basename(urllib.parse.urlparse(target).path)
++    if basename == 'load.php' and ('?' in target or '@' in target):
++        return True
++    if basename.startswith('load.php@'):
++        return True
      return False
-
-
-@@ -212,26 +359,64 @@ def is_external_link(target):
+ 
+ 
+-def transform_loader_link(target, file, root):
+-    # Absolute loader.php links need to be made relative
+-    abstarget = os.path.join(root, "common", convert_loader_name(target))
++def transform_loader_link(target, file, root, rename_map=None):
++    # Loader assets are moved to common regardless of their original depth.
++    filename = convert_loader_name(target)
++    abstarget = os.path.join(root, "common", filename)
++    if rename_map:
++        filename = rename_map.get(
++                abstarget, rename_map.get(filename, filename))
++        abstarget = os.path.join(root, "common", filename)
+     return os.path.relpath(abstarget, os.path.dirname(file))
+ 
+ 
+@@ -212,26 +363,100 @@ def is_external_link(target):
      return url.scheme != '' or url.netloc != ''
-
-
+ 
+ 
+-def trasform_relative_link(rename_map, target, file):
 +def transform_external_asset_link(target, file, root):
 +    parsed = urllib.parse.urlparse(target)
 +    local_hosts = ('zh.cppreference.com', 'upload.cppreference.com',
 +                   'cdn.jsdelivr.net')
++    if parsed.scheme in ('http', 'https') and \
++            parsed.netloc == 'upload.cppreference.com':
++        path = parsed.path.lstrip('/')
++        if path.startswith('mwiki/'):
++            path = path[len('mwiki/'):]
++        elif path.startswith('images/'):
++            pass
++        else:
++            path = os.path.join('images', path)
++        abstarget = os.path.join(root, 'common', path)
++        return os.path.relpath(abstarget, os.path.dirname(file))
 +    if parsed.scheme in ('http', 'https') and parsed.netloc in local_hosts:
 +        abstarget = os.path.join(root, parsed.netloc, parsed.path.lstrip('/'))
 +        return os.path.relpath(abstarget, os.path.dirname(file))
 +    return target
 +
 +
- def trasform_relative_link(rename_map, target, file):
++def common_relative_path(root, file, *parts):
++    abstarget = os.path.join(root, 'common', *parts)
++    return os.path.relpath(abstarget, os.path.dirname(file))
++
++
++def trasform_relative_link(rename_map, target, file, root=None):
++    if root is None:
++        root = os.path.dirname(os.path.dirname(file))
++
      # urlparse returns (scheme, host, path, params, query, fragment)
      _, _, path, params, _, fragment = urllib.parse.urlparse(target)
      assert params == ''
-
+ 
 +    raw_path = path
      path = urllib.parse.unquote(path)
 -    path = path.replace('../../upload.cppreference.com/mwiki/', '../common/')
@@ -352,20 +380,25 @@ index 35aa7c3..26cb22c 100644
 +        fragment = ''
 +
 +    def move_common_path(value):
-+        value = value.replace(
-+                '../../upload.cppreference.com/mwiki/', '../common/')
-+        value = value.replace(
-+                '../../upload.cppreference.com/images/',
-+                '../common/images/')
-+        value = value.replace('../mwiki/', '../common/')
-+        value = value.replace('../extensions/', '../common/extensions/')
-+        value = value.replace('../resources/', '../common/resources/')
-+        value = value.replace('../rest.php/', '../common/rest.php/')
-+        value = value.replace('../skins/', '../common/skins/')
-+        value = re.sub(r'(^|/)\.\./load\.php',
-+                       r'\1../common/load.php', value)
-+        if value.startswith('load.php'):
-+            value = '../common/' + value
++        match = re.match(
++                r"^(?:\.\./)+upload.cppreference.com/mwiki/(.+)$",
++                value)
++        if match:
++            return common_relative_path(root, file, match.group(1))
++        match = re.match(
++                r"^(?:\.\./)+upload.cppreference.com/images/(.+)$",
++                value)
++        if match:
++            return common_relative_path(root, file, "images", match.group(1))
++        match = re.match(r"^(?:\.\./)+mwiki/(.+)$", value)
++        if match:
++            return common_relative_path(root, file, match.group(1))
++        match = re.match(
++                r"^(?:\.\./)+(extensions|resources|rest.php|skins)/(.+)$",
++                value)
++        if match:
++            return common_relative_path(
++                    root, file, match.group(1), match.group(2))
 +        return value
 +
 +    path = re.sub(r'(\.(?:png|jpe?g|gif|svg|webp|ico))'
@@ -373,9 +406,19 @@ index 35aa7c3..26cb22c 100644
 +                  path, flags=re.IGNORECASE)
 +    path = re.sub(r'(\.(?:png|jpe?g|gif|svg|webp|ico))#.*$',
 +                  r'\1', path, flags=re.IGNORECASE)
++
++    if path.startswith('/common/'):
++        path = common_relative_path(root, file, path[len('/common/'):])
++    elif re.match(r'^(?:\.\./)+common/', path):
++        common_path = re.sub(r'^(?:\.\./)+common/', '', path)
++        path = common_relative_path(root, file, common_path)
++    elif re.search(r'(^|/)common/images/', path):
++        image_path = re.sub(r'^.*?(?:^|/)common/images/', '', path)
++        path = common_relative_path(root, file, 'images', image_path)
++
 +    path = move_common_path(path)
 +    raw_path = move_common_path(raw_path)
-
+ 
      dir, fn = os.path.split(path)
 -    new_fn = rename_map.get(fn)
 -    if new_fn:
@@ -395,20 +438,33 @@ index 35aa7c3..26cb22c 100644
 +    new_fn = rename_map.get(raw_abstarget, new_fn)
 +    new_fn = rename_map.get(fn, new_fn)
 +    new_fn = rename_map.get(raw_fn, new_fn)
++    if new_fn == 'loader_zh_ext_pygments_skins_cppreference2.css':
++        new_fn = 'ext.css'
      if new_fn:
          path = os.path.join(dir, new_fn)
-
-@@ -251,6 +436,9 @@ def transform_link(rename_map, target, file, root):
+ 
+@@ -245,15 +470,18 @@ def trasform_relative_link(rename_map, target, file):
+ # root is the path to the root of the archive.
+ def transform_link(rename_map, target, file, root):
+     if is_loader_link(target):
+-        return transform_loader_link(target, file, root)
++        return transform_loader_link(target, file, root, rename_map)
+ 
+     if is_ranges_placeholder(target):
          return transform_ranges_placeholder(target, file, root)
-
+ 
      if is_external_link(target):
 +        transformed = transform_external_asset_link(target, file, root)
 +        if transformed != target:
-+            return trasform_relative_link(rename_map, transformed, file)
++            return trasform_relative_link(rename_map, transformed, file, root)
          return target
-
-     return trasform_relative_link(rename_map, target, file)
-@@ -314,14 +502,23 @@ def remove_see_also(html):
+ 
+-    return trasform_relative_link(rename_map, target, file)
++    return trasform_relative_link(rename_map, target, file, root)
+ 
+ 
+ def has_class(el, *classes_to_check):
+@@ -314,14 +542,23 @@ def remove_see_also(html):
  def remove_google_analytics(html):
      for el in html.xpath('/html/body/script'):
          if el.get('src') is not None:
@@ -423,8 +479,8 @@ index 35aa7c3..26cb22c 100644
 +                    'googletagmanager.com' in el.text or \
 +                    "gtag('config'" in el.text:
                  el.getparent().remove(el)
-
-
+ 
+ 
 +def remove_cloudflare_insights(html):
 +    for el in html.xpath('//script[@src]'):
 +        if 'static.cloudflareinsights.com' in el.get('src'):
@@ -434,18 +490,28 @@ index 35aa7c3..26cb22c 100644
  # remove ads
  def remove_ads(html):
      # Carbon Ads
-@@ -396,6 +593,7 @@ def preprocess_html_file(root, fn, rename_map):
+@@ -384,8 +621,7 @@ def remove_unused_external(html):
+         if el.get('rel') in ('alternate', 'search', 'edit', 'EditURI'):
+             el.getparent().remove(el)
+         elif el.get('rel') == 'shortcut icon':
+-            (head, tail) = os.path.split(el.get('href'))
+-            el.set('href', os.path.join(head, 'common', tail))
++            el.set('href', '/common/favicon.ico')
+ 
+ 
+ def preprocess_html_file(root, fn, rename_map):
+@@ -396,6 +632,7 @@ def preprocess_html_file(root, fn, rename_map):
      remove_unused_external(html)
      remove_noprint(html, keep_footer=True)
      remove_google_analytics(html)
 +    remove_cloudflare_insights(html)
      remove_ads(html)
      remove_fileinfo(html)
-
-@@ -421,13 +619,39 @@ def preprocess_css_file(fn):
-
+ 
+@@ -421,13 +658,39 @@ def preprocess_css_file(fn):
+ 
      # note that query string is not used in css files
-
+ 
 +    text = text.replace('https://zh.cppreference.com/', '')
 +    text = text.replace('https://upload.cppreference.com/mwiki/images/',
 +                        'images/')
@@ -462,7 +528,7 @@ index 35aa7c3..26cb22c 100644
                          'DejaVuSansMonoCondensed60.ttf')
      text = text.replace('../DejaVuSansMonoCondensed75.ttf',
                          'DejaVuSansMonoCondensed75.ttf')
-
+ 
 +    text = text.replace('../upload.cppreference.com/mwiki/images/',
 +                        'images/')
 +    text = text.replace('../upload.cppreference.com/images/',
@@ -479,17 +545,17 @@ index 35aa7c3..26cb22c 100644
 +                  r'\1', text, flags=re.IGNORECASE)
 +    text = re.sub(r'(\.(?:png|jpe?g|gif|svg|webp|ico))#[^"\'\s)]+',
 +                  r'\1', text, flags=re.IGNORECASE)
-
+ 
      # QT Help viewer doesn't understand nth-child
      text = text.replace('nth-child(1)', 'first-child')
-@@ -442,6 +666,9 @@ def preprocess_startup_script(fn):
+@@ -442,6 +705,9 @@ def preprocess_startup_script(fn):
          text = f.read()
-
+ 
      text = re.sub(r'document\.write\([^)]+\);', '', text)
 +    text = re.sub(r'mw\.loader\.addSource\(\{.*?\}\);', '',
 +                  text, flags=re.DOTALL)
 +    text = re.sub(r'mw\.loader\.load\([^;]*\);', '', text)
-
+ 
      with open(fn, "w", encoding='utf-8') as f:
          f.write(text)
 diff --git a/preprocess.py b/preprocess.py
@@ -501,13 +567,13 @@ index c2513aa..2f1c7e1 100755
  import concurrent.futures
  import os
 -import shutil
-
+ 
  from commands import preprocess
-
+ 
 @@ -72,12 +71,16 @@ def main():
-
+ 
      # clean the css files
-
+ 
 -    for fn in [os.path.join(root, 'common/site_modules.css'),
 -               os.path.join(root, 'common/ext.css')]:
 -        preprocess.preprocess_css_file(fn)
@@ -515,7 +581,7 @@ index c2513aa..2f1c7e1 100755
 +    for filename in os.listdir(common):
 +        if filename.endswith('.css'):
 +            preprocess.preprocess_css_file(os.path.join(common, filename))
-
+ 
 -    preprocess.preprocess_startup_script(
 -        os.path.join(root, 'common/startup_scripts.js'))
 +    for filename in os.listdir(common):
@@ -523,6 +589,6 @@ index c2513aa..2f1c7e1 100755
 +                filename.endswith('.js'):
 +            preprocess.preprocess_startup_script(
 +                    os.path.join(common, filename))
-
-
+ 
+ 
  if __name__ == "__main__":
